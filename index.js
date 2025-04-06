@@ -54,6 +54,24 @@ async function run() {
       const result = await servicesCollection.findOne(query);
       res.send(result);
     });
+
+    // update service
+    app.put("/update-service/:id", async (req, res) => {
+      const id = req.params.id;
+      const serviceData = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: serviceData,
+      };
+      const options = { upsert: true };
+      const result = await servicesCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
