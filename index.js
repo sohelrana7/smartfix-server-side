@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const exprees = require("express");
 const app = exprees();
 const port = process.env.PORT || 5000;
@@ -38,6 +38,20 @@ async function run() {
     //get all services data from db
     app.get("/services", async (req, res) => {
       const result = await servicesCollection.find().toArray();
+      res.send(result);
+    });
+    // get all service posted by a specific user
+    app.get("/services/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { "provider.provider_email": email };
+      const result = await servicesCollection.find(query).toArray();
+      res.send(result);
+    });
+    // single service
+    app.get("/service/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await servicesCollection.findOne(query);
       res.send(result);
     });
     // Send a ping to confirm a successful connection
