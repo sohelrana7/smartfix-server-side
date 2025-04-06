@@ -98,6 +98,21 @@ async function run() {
       const result = bookingsCollection.insertOne(bookingData);
       res.send(result);
     });
+
+    // get all bids by a specific user
+    app.get("/bookings/:email", async (req, res) => {
+      const isProvider = req.query.buyer;
+      const email = req.params.email;
+      let query = {};
+      if (isProvider) {
+        query.provider.provider_email = email;
+      } else {
+        query.user_email = email;
+      }
+      const result = await bookingsCollection.find(query).toArray();
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
