@@ -28,6 +28,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     const servicesCollection = client.db("smartfixDB").collection("services");
+    const bookingsCollection = client.db("smartfixDB").collection("bookings");
 
     app.post("/add-service", async (req, res) => {
       const serviceData = req.body;
@@ -76,6 +77,25 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await servicesCollection.deleteOne(query);
+      res.send(result);
+    });
+    // save a booking in db
+    app.post("/add-booking", async (req, res) => {
+      const bookingData = req.body;
+      console.log("req.body", bookingData);
+      // 0. if a user placed a bid already in this job
+      const query = {
+        user_email: bookingData.user_email,
+        service_Id: bookingData.service_Id,
+      };
+      const alreadyExist = await bookingsCollection.findOne(query);
+      console.log("if already exist", alreadyExist);
+      if (alreadyExist) {
+        return res
+          .status(400)
+          .json({ error: "You have already booked on this service" });
+      }
+      const result = bookingsCollection.insertOne(bookingData);
       res.send(result);
     });
     // Send a ping to confirm a successful connection
