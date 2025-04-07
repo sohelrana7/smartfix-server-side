@@ -99,20 +99,31 @@ async function run() {
       res.send(result);
     });
 
-    // get all bids by a specific user
+    // get all booking by a specific user
     app.get("/bookings/:email", async (req, res) => {
-      const isProvider = req.query.buyer;
+      const isProvider = req.query.provider;
       const email = req.params.email;
       let query = {};
       if (isProvider) {
-        query.provider.provider_email = email;
+        query.provider_email = email;
       } else {
         query.user_email = email;
       }
       const result = await bookingsCollection.find(query).toArray();
       res.send(result);
     });
-
+    // update booking status
+    app.patch("/booking-status-update/:id", async (req, res) => {
+      const id = req.params.id;
+      const { newStatus } = req.body;
+      console.log(newStatus);
+      const filter = { _id: new ObjectId(id) };
+      const updated = {
+        $set: { service_status: newStatus },
+      };
+      const result = await bookingsCollection.updateOne(filter, updated);
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
