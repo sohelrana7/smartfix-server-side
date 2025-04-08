@@ -41,6 +41,20 @@ async function run() {
       const result = await servicesCollection.find().toArray();
       res.send(result);
     });
+    // get all service by search
+    app.get("/all-services", async (req, res) => {
+      const search = req.query.search;
+      let options = {};
+      let query = {
+        service_name: {
+          $regex: search,
+          $options: "i",
+        },
+      };
+      const result = await servicesCollection.find(query, options).toArray();
+      res.send(result);
+    });
+
     // get all service posted by a specific user
     app.get("/services/:email", async (req, res) => {
       const email = req.params.email;
