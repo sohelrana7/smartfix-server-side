@@ -1,18 +1,41 @@
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const exprees = require("express");
+const jwt = require("jsonwebtoken");
 const app = exprees();
 const port = process.env.PORT || 5000;
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173", // Allow frontend URL
+    credentials: true, // Allow cookies/auth headers
+  })
+);
+// app.use(cors());
 app.use(exprees.json());
+app.use(cookieParser());
 
 // smartfix
 // zrbVjmDEjtdYqzfk
 
-const uri = `mongodb+srv://smartfix:zrbVjmDEjtdYqzfk@cluster0.7heaa.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  console.log("verifyToken", token);
+  if (!token) return res.status(401).send({ message: "unauthorized access" });
+  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "auauthorized access" });
+    }
+    console.log("decoded token", decoded);
+    req.user = decoded;
+  });
+  next();
+};
+
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.7heaa.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -29,6 +52,35 @@ async function run() {
     await client.connect();
     const servicesCollection = client.db("smartfixDB").collection("services");
     const bookingsCollection = client.db("smartfixDB").collection("bookings");
+
+    // generate jwt
+    app.post("/jwt", async (req, res) => {
+      const { email } = req.body;
+      console.log("email befor create token", email);
+      // create token
+      const token = jwt.sign({ email }, process.env.SECRET_KEY, {
+        expiresIn: "1d",
+      });
+      console.log("token server", token);
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
+
+    // logout || clear cookie from browser
+    app.get("/logout", async (req, res) => {
+      res
+        .clearCookie("token", {
+          maxAge: 0,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
 
     app.post("/add-service", async (req, res) => {
       const serviceData = req.body;
@@ -56,8 +108,14 @@ async function run() {
     });
 
     // get all service posted by a specific user
-    app.get("/services/:email", async (req, res) => {
+    app.get("/services/:email", verifyToken, async (req, res) => {
+      const decodedEmail = req.user?.email;
       const email = req.params.email;
+      // console.log("email from token", decodedEmail);
+      // console.log("email from params", email);
+      if (decodedEmail !== email) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
       const query = { "provider.provider_email": email };
       const result = await servicesCollection.find(query).toArray();
       res.send(result);
@@ -97,7 +155,7 @@ async function run() {
     app.post("/add-booking", async (req, res) => {
       const bookingData = req.body;
       console.log("req.body", bookingData);
-      // 0. if a user placed a bid already in this job
+      // 0. if a user placed a service already in this service
       const query = {
         user_email: bookingData.user_email,
         service_Id: bookingData.service_Id,
@@ -114,9 +172,15 @@ async function run() {
     });
 
     // get all booking by a specific user
-    app.get("/bookings/:email", async (req, res) => {
+    app.get("/bookings/:email", verifyToken, async (req, res) => {
+      const decodedEmail = req.user?.email;
       const isProvider = req.query.provider;
       const email = req.params.email;
+      // console.log("email from params", email);
+      // console.log("email from token", decodedEmail);
+      if (decodedEmail !== email) {
+        return res.status(401).send({ message: "unauthorized access" });
+      }
       let query = {};
       if (isProvider) {
         query.provider_email = email;
