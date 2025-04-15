@@ -10,16 +10,13 @@ const cookieParser = require("cookie-parser");
 // middleware
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow frontend URL
+    origin: "https://smartfix-4f62c.web.app", // Allow frontend URL
     credentials: true, // Allow cookies/auth headers
   })
 );
 // app.use(cors());
 app.use(exprees.json());
 app.use(cookieParser());
-
-// smartfix
-// zrbVjmDEjtdYqzfk
 
 const verifyToken = (req, res, next) => {
   const token = req.cookies?.token;
@@ -49,7 +46,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     const servicesCollection = client.db("smartfixDB").collection("services");
     const bookingsCollection = client.db("smartfixDB").collection("bookings");
 
@@ -203,10 +200,10 @@ async function run() {
       res.send(result);
     });
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
